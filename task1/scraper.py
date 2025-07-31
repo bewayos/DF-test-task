@@ -59,47 +59,52 @@ class Scraper:
             logging.error(f"get_subcategories failed: {e}")
             return []
 
-def get_product_links(self, subcategory_url: str, category: str) -> list[dict]:
-    """
-    Parses the 1st page of a subcategory.
-    Returns a list of dictionaries with name, url, category
-    """
-    try:
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                          "AppleWebKit/537.36 (KHTML, like Gecko) "
-                          "Chrome/122.0.0.0 Safari/537.36",
-            "Accept-Language": "en-US,en;q=0.9",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9",
-        }
+    def get_product_links(self, subcategory_url: str, category: str) -> list[dict]:
+        """
+        Parses the first page of a subcategory to extract product preview info.
+        """
+        try:
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                            "AppleWebKit/537.36 (KHTML, like Gecko) "
+                            "Chrome/122.0.0.0 Safari/537.36",
+                "Accept-Language": "en-US,en;q=0.9",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9",
+            }
 
-        logging.debug(f"GET {subcategory_url}")
-        response = requests.get(subcategory_url, headers=headers, timeout=10)
-        response.raise_for_status()
+            logging.debug(f"GET {subcategory_url}")
+            response = requests.get(subcategory_url, headers=headers, timeout=10)
+            response.raise_for_status()
 
-        tree = html.fromstring(response.content)
+            # Save HTML for debugging
+            with open("debug_sub.html", "wb") as f:
+                f.write(response.content)
 
-        product_cards = tree.xpath('//a[contains(@href, "/products/")]')
-        logging.debug(f"Found {len(product_cards)} product links on page")
+            tree = html.fromstring(response.content)
 
-        results = []
-        for card in product_cards:
-            href = card.get("href")
-            name = card.xpath('.//h2/text()') or card.xpath('.//span/text()')
-            if not href or not name:
-                continue
+            product_cards = tree.xpath('//a[contains(@href, "/marketplace/")]')
+            logging.debug(f"Found {len(product_cards)} product cards on page")
 
-            full_url = "https://www.vendr.com" + href.split("?")[0]
-            results.append({
-                "name": name[0].strip(),
-                "url": full_url,
-                "category": category
-            })
+            results = []
+            for card in product_cards:
+                href = card.get("href")
+                name = card.xpath('.//span[contains(@class, "_cardTitle")]/text()')
+                description = card.xpath('.//span[contains(@class, "_description")]/text()')
 
-        logging.info(f"Extracted {len(results)} products from page 1 of {subcategory_url}")
-        return results
+                if not href or not name:
+                    continue
 
-    except Exception as e:
-        logging.error(f"get_product_links failed: {e}")
-        return []
+                full_url = "https://www.vendr.com" + href.split("?")[0]
+                results.append({
+                    "name": name[0].strip(),
+                    "url": full_url,
+                    "category": category,
+                    "description": description[0].strip() if description else ""
+                })
 
+            logging.info(f"Extracted {len(results)} products from page 1 of {subcategory_url}")
+            return results
+
+        except Exception as e:
+            logging.error(f"get_product_links failed: {e}")
+            return []
