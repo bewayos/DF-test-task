@@ -76,10 +76,6 @@ class Scraper:
             response = requests.get(subcategory_url, headers=headers, timeout=10)
             response.raise_for_status()
 
-            # Save HTML for debugging
-            with open("debug_sub.html", "wb") as f:
-                f.write(response.content)
-
             tree = html.fromstring(response.content)
 
             product_cards = tree.xpath('//a[contains(@href, "/marketplace/")]')
@@ -108,3 +104,27 @@ class Scraper:
         except Exception as e:
             logging.error(f"get_product_links failed: {e}")
             return []
+        
+    def get_all_product_links(self, subcategory_url: str, category: str) -> list[dict]:
+        """
+        Iterates over paginated subcategory pages and collects all product previews.
+        """
+        page = 1
+        all_results = []
+
+        while True:
+            paginated_url = f"{subcategory_url}?page={page}"
+            logging.debug(f"Processing page {page}: {paginated_url}")
+
+            products = self.get_product_links(paginated_url, category)
+            if not products:
+                logging.info(f"No products found on page {page}. Stopping.")
+                break
+
+            all_results.extend(products)
+            logging.info(f"Page {page}: {len(products)} products")
+            page += 1
+
+        logging.info(f"Total collected from {subcategory_url}: {len(all_results)} products")
+        return all_results
+
