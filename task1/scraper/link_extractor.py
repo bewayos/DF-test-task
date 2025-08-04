@@ -1,5 +1,6 @@
 from lxml import html
 import logging
+from .models import Product
 
 class LinkExtractor:
     def __init__(self, client):
@@ -62,6 +63,6 @@ class LinkExtractor:
                 break
             all_results.extend(products)
             page += 1
-        logging.info(f"[LinkExtractor] Total collected from {subcategory_url}: {len(all_results)}")
 
+        logging.info(f"[LinkExtractor] Total collected from {subcategory_url}: {len(all_results)}")
         return all_results
