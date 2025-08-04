@@ -66,7 +66,7 @@ task1/
 ### 1. Clone the repository and navigate to the project
 
 ```
-git clone <your_repo_url>
+git clone https://github.com/bewayos/DF-test-task.git
 cd dataforest-test-task/task1
 ```
 
