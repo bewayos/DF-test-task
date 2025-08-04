@@ -3,22 +3,20 @@ import time
 from multiprocessing import Manager
 from scraper_process import ScraperProcess
 from data_models.book import Book
-
+from storage.writer import WriterProcess
+from config import DEFAULT_CATEGORIES, NUM_PROCESSES, HEADLESS, TIMEOUT
 
 def main():
     manager = Manager()
     task_queue = manager.Queue()
     results_queue = manager.Queue()
 
-    category_urls = [
-        "https://books.toscrape.com/catalogue/category/books/poetry_23/index.html",
-        "https://books.toscrape.com/catalogue/category/books/travel_2/index.html",
-    ]
+    category_urls = DEFAULT_CATEGORIES
+    num_processes = NUM_PROCESSES
 
     for url in category_urls:
         task_queue.put(url)
 
-    num_processes = 2
     processes = []
 
     for _ in range(num_processes):
@@ -26,19 +24,19 @@ def main():
         p.start()
         processes.append(p)
 
+    writer = WriterProcess(results_queue)
+    writer.start()
+
     for p in processes:
         p.join()
 
-    print("\nAll scraper processes finished. Results:\n")
+    time.sleep(3)
 
-    results = []
-    while not results_queue.empty():
-        book: Book = results_queue.get()
-        results.append(book)
+    writer.terminate()
+    writer.join()
 
-    print(f"Total books collected: {len(results)}\n")
-    for b in results:
-        print(f"{b.title} | {b.category} | {b.price}")
+    print("All scraper processes finished. Books are written directly to the database.")
+
 
 
 if __name__ == "__main__":
