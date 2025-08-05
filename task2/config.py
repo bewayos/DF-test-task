@@ -16,6 +16,8 @@ NUM_PROCESSES = int(os.getenv("NUM_PROCESSES", "3"))
 
 HEADLESS = os.getenv("HEADLESS", "true").lower() == "true"
 
+STOP_SIGNAL = "__STOP__"
+
 # Playwright default timeout
 TIMEOUT = int(os.getenv("TIMEOUT", "10000"))  # in milliseconds
 
@@ -24,3 +26,6 @@ DB_PORT = int(os.getenv("DB_PORT", "5434"))
 DB_NAME = os.getenv("DB_NAME", "books")
 DB_USER = os.getenv("DB_USER", "postgres")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "yourpassword")
+
+# Simulate crash in one scraper process for testing ProcessManager
+SIMULATE_CRASH = os.getenv("SIMULATE_CRASH", "false").lower() == "true"

@@ -1,44 +1,36 @@
 import multiprocessing
-import time
-from multiprocessing import Manager
-from scraper_process import ScraperProcess
-from data_models.book import Book
+import logging
+from multiprocessing import Queue
 from storage.writer import WriterProcess
-from config import DEFAULT_CATEGORIES, NUM_PROCESSES, HEADLESS, TIMEOUT
+from process_manager import ProcessManager
+from config import DEFAULT_CATEGORIES, NUM_PROCESSES
+
 
 def main():
-    manager = Manager()
-    task_queue = manager.Queue()
-    results_queue = manager.Queue()
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(message)s"
+    )
 
-    category_urls = DEFAULT_CATEGORIES
-    num_processes = NUM_PROCESSES
+    task_queue = Queue()
+    results_queue = Queue()
 
-    for url in category_urls:
+    for url in DEFAULT_CATEGORIES:
         task_queue.put(url)
-
-    processes = []
-
-    for _ in range(num_processes):
-        p = ScraperProcess(task_queue, results_queue)
-        p.start()
-        processes.append(p)
 
     writer = WriterProcess(results_queue)
     writer.start()
 
-    for p in processes:
-        p.join()
+    pm = ProcessManager(NUM_PROCESSES, task_queue, results_queue)
+    pm.start_processes()
+    pm.monitor_processes()
 
-    time.sleep(3)
-
-    writer.terminate()
     writer.join()
+    logging.info("Writer process stopped.")
 
-    print("All scraper processes finished. Books are written directly to the database.")
-
+    logging.info("All scraper processes finished. Books are written directly to the database.")
 
 
 if __name__ == "__main__":
-    multiprocessing.set_start_method("spawn") 
+    multiprocessing.set_start_method("spawn")
     main()
