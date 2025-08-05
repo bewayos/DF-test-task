@@ -1,7 +1,8 @@
 import psycopg2
 import multiprocessing
+import logging
 from data_models.book import Book
-from config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
+from config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, STOP_SIGNAL
 
 
 class WriterProcess(multiprocessing.Process):
@@ -26,14 +27,32 @@ class WriterProcess(multiprocessing.Process):
 
         while True:
             try:
-                book = self.results_queue.get(timeout=10)
-                print(f"[WriterProcess] Writing to DB: {book.title}")
-                self.insert_book(cursor, book)
+                item = self.results_queue.get(timeout=10)
+
+                if item == STOP_SIGNAL:
+                    logging.info("[WriterProcess] Received STOP_SIGNAL. Shutting down...")
+                    break
+
+                if not self.is_valid_book(item):
+                    logging.warning(f"[WriterProcess] Skipping invalid book entry: {item}")
+                    continue
+
+                logging.info(f"[WriterProcess] Writing to DB: {item.title}")
+                self.insert_book(cursor, item)
                 conn.commit()
             except Exception as e:
                 conn.rollback()
-                print(f"[WriterProcess] Error inserting book: {e}")
+                logging.error(f"[WriterProcess] Error inserting book: {e}")
 
+        cursor.close()
+        conn.close()
+        logging.info("[WriterProcess] Database connection closed.")
+
+    def is_valid_book(self, book: Book) -> bool:
+        """Validate mandatory fields before inserting."""
+        if not book.title or not book.upc:
+            return False
+        return True
 
     def insert_book(self, cursor, book: Book):
         cursor.execute("""
