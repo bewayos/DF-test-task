@@ -50,3 +50,5 @@ class BookParser:
             tax=product_info.get("Tax", ""),
             num_reviews=product_info.get("Number of reviews", "")
         )
+        print(f"[DEBUG] Parsed book: {title}")
+
